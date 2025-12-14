@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_note/features/auth/bloc/auth_bloc.dart';
+import 'package:flutter_note/features/auth/bloc/auth_event.dart';
 import 'package:flutter_note/firestore_helper.dart';
 import 'package:flutter_note/models/note_model.dart';
 import 'package:flutter_note/pages/note_editor_page.dart';
 import 'package:flutter_note/pages/note_update_page.dart';
-import 'package:get/get.dart'; // Import GetX
-// Pastikan import ini mengarah ke lokasi controller yang benar
-import 'package:flutter_note/features/auth/controller/auth_controller.dart'; 
 
 class NoteHomePage extends StatefulWidget {
   const NoteHomePage({super.key});
@@ -17,10 +17,6 @@ class NoteHomePage extends StatefulWidget {
 
 class _NoteListPageState extends State<NoteHomePage> {
   final FirestoreHelper fsHelper = FirestoreHelper();
-
-  // Kita bisa ambil controller di sini jika ingin menggunakan variabelnya, 
-  // tapi untuk logout cukup panggil Get.find() di tombolnya.
-  // final AuthController authC = Get.find<AuthController>(); 
 
   List<NoteModel> _notes = [];
 
@@ -106,25 +102,16 @@ class _NoteListPageState extends State<NoteHomePage> {
       appBar: AppBar(
         title: const Text('My Notes'),
         elevation: 0,
-        // --- TAMBAHAN: TOMBOL LOGOUT ---
         actions: [
           IconButton(
             onPressed: () {
-              // Memanggil fungsi logout dari AuthController
-              // GetX akan otomatis mengarahkan ke halaman Login karena kita menggunakan 'ever' di controller
-              Get.find<AuthController>().logout();
+              // Panggil Event Logout dari Bloc
+              context.read<AuthBloc>().add(AuthLogoutRequested());
             },
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
           ),
         ],
-        // -------------------------------
-      ),
-      body: _notes.isEmpty ? _buildEmptyState() : _buildStreamNoteList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCreateNote,
-        tooltip: 'Create new note',
-        child: const Icon(Icons.add),
       ),
     );
   }
