@@ -1,31 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_note/features/auth/bloc/auth_bloc.dart';
-import 'package:flutter_note/features/auth/bloc/auth_event.dart';
-import 'package:flutter_note/features/auth/bloc/auth_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_note/features/auth/controller/auth_controller.dart';
 
-class SigninPage extends StatefulWidget {
+class SigninPage extends ConsumerStatefulWidget {
   const SigninPage({super.key});
 
   @override
-  State<SigninPage> createState() => _SigninPageState();
+  ConsumerState<SigninPage> createState() => _SigninPageState();
 }
 
-class _SigninPageState extends State<SigninPage> {
+class _SigninPageState extends ConsumerState<SigninPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController psswdController = TextEditingController();
   bool passwordVisible = true;
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(authControllerProvider);
+
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next is AsyncError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error.toString())),
+        );
+      }
+    });
+
     return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        child: Center(
+      body: Center(
+        child: SingleChildScrollView(
           child: SizedBox(
             width: 400,
             child: Padding(
@@ -57,38 +60,36 @@ class _SigninPageState extends State<SigninPage> {
                   ),
                   const SizedBox(height: 16),
                   
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      if (state is AuthLoading) {
-                        return const CircularProgressIndicator();
-                      }
-                      return ElevatedButton(
-                        onPressed: () {
-                          context.read<AuthBloc>().add(
-                            AuthLoginRequested(
-                              email: emailController.text,
-                              password: psswdController.text,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  state.isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                          onPressed: () {
+                            ref.read(authControllerProvider.notifier).login(
+                                  emailController.text,
+                                  psswdController.text,
+                                );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(12), 
+                            child: Text('Signin')
+                          ),
                         ),
-                        child: const Padding(padding: EdgeInsets.all(12), child: Text('Signin')),
-                      );
-                    },
-                  ),
 
                   const SizedBox(height: 16),
                   const Text('or'),
                   const SizedBox(height: 16),
 
-                  ElevatedButton(
-                    onPressed: () {
-                       context.read<AuthBloc>().add(AuthGoogleLoginRequested());
-                    },
-                    child: const Padding(padding: EdgeInsets.all(12), child: Text('Signin with Google')),
-                  ),
+                  state.isLoading 
+                    ? const SizedBox()
+                    : ElevatedButton(
+                        onPressed: () {
+                           ref.read(authControllerProvider.notifier).loginGoogle();
+                        },
+                        child: const Padding(padding: EdgeInsets.all(12), child: Text('Signin with Google')),
+                      ),
 
                   const SizedBox(height: 32),
                   Row(

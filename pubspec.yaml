@@ -11,23 +11,26 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   
-  # Database Lokal
+
   sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.6
   sqflite_common_ffi_web: ^1.0.1+2
-  
   firebase_core: ^3.0.0
   cloud_firestore: ^5.0.0
   firebase_auth: ^5.0.0
   google_sign_in: ^7.2.0
-  equatable: ^2.0.7
-  bloc: ^9.1.0
-  flutter_bloc: ^9.1.1
+
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  
+
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
 
 flutter:
   uses-material-design: true
