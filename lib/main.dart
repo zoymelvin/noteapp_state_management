@@ -1,29 +1,20 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Import ini penting
-import 'package:flutter_note/auth_helper.dart';
-import 'package:flutter_note/features/auth/bloc/auth_bloc.dart';
-import 'package:flutter_note/features/auth/bloc/auth_event.dart';
-import 'package:flutter_note/features/auth/bloc/auth_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Wajib import
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_note/firebase_options.dart';
-import 'package:flutter_note/firestore_user_helper.dart';
 import 'package:flutter_note/pages/note_home_page.dart';
 import 'package:flutter_note/pages/signin_page.dart';
 import 'package:flutter_note/pages/singup_page.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'package:flutter_note/features/auth/controller/auth_controller.dart'; // Import controller kita
 
-Future main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) {
-    databaseFactory = databaseFactoryFfiWeb;
-  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true);
 
-  runApp(const MyApp());
+  // Bungkus root dengan ProviderScope
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -31,43 +22,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => AuthBloc(
-        authHelper: AuthHelper(),
-        fsUserHelper: FirestoreUserHelper(),
-      )..add(AuthCheckRequested()),
-      child: MaterialApp(
-        title: 'Flutter Note',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.lime),
-        ),
-        home: const AuthWrapper(),
-        routes: {
-          '/home': (context) => const NoteHomePage(),
-          '/signin': (context) => const SigninPage(),
-          '/signup': (context) => const SignupPage(),
-        },
+    return MaterialApp(
+      title: 'Flutter Note',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lime),
       ),
+      home: const AuthWrapper(),
+      routes: {
+        '/home': (context) => const NoteHomePage(),
+        '/signin': (context) => const SigninPage(),
+        '/signup': (context) => const SignupPage(),
+      },
     );
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+// Widget khusus untuk mengatur navigasi Login/Home
+class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthAuthenticated) {
-           Navigator.of(context).pushReplacementNamed('/home');
-        } else if (state is AuthUnauthenticated) {
-           Navigator.of(context).pushReplacementNamed('/signin');
-        } else if (state is AuthError) {
-           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Kita pantau stream user dari authStateProvider
+    final authState = ref.watch(authStateProvider);
+
+    return authState.when(
+      data: (user) {
+        if (user != null) return const NoteHomePage();
+        return const SigninPage();
       },
-      child: const SigninPage(),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, trace) => Scaffold(body: Center(child: Text('Error: $e'))),
     );
   }
 }

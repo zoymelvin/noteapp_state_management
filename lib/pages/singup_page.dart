@@ -1,37 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_note/features/auth/bloc/auth_bloc.dart';
-import 'package:flutter_note/features/auth/bloc/auth_event.dart';
-import 'package:flutter_note/features/auth/bloc/auth_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Pake Riverpod
+import 'package:flutter_note/features/auth/controller/auth_controller.dart';
 
-class SignupPage extends StatefulWidget {
+class SignupPage extends ConsumerStatefulWidget {
   const SignupPage({super.key});
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  ConsumerState<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignupPageState extends State<SignupPage> {
+class _SignupPageState extends ConsumerState<SignupPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController psswdController = TextEditingController();
   bool passwordVisible = true;
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(authControllerProvider);
+
+    // Listener untuk feedback
+    ref.listen(authControllerProvider, (previous, next) {
+      if (next is AsyncError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error.toString())),
+        );
+      } else if (next is AsyncData && !next.isLoading) {
+        // Jika sukses signup, tutup halaman (kembali ke login/home)
+        if (mounted) Navigator.pop(context);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Write Note"),
-        leading: BackButton(onPressed: () => Navigator.pop(context)),
       ),
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            Navigator.of(context).pop(); 
-          } else if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        child: Center(
+      body: Center(
+        child: SingleChildScrollView(
           child: SizedBox(
             width: 400,
             child: Padding(
@@ -41,7 +45,6 @@ class _SignupPageState extends State<SignupPage> {
                 children: [
                   Text('Signup', style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 32),
-                  
                   TextField(
                     controller: emailController,
                     decoration: InputDecoration(
@@ -50,7 +53,6 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
                   TextField(
                     controller: psswdController,
                     obscureText: passwordVisible,
@@ -65,27 +67,21 @@ class _SignupPageState extends State<SignupPage> {
                   ),
                   const SizedBox(height: 16),
                   
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      if (state is AuthLoading) {
-                        return const CircularProgressIndicator();
-                      }
-                      return ElevatedButton(
-                        onPressed: () {
-                          context.read<AuthBloc>().add(
-                            AuthSignupRequested(
-                              email: emailController.text, 
-                              password: psswdController.text
-                            )
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  // Tombol Signup
+                  state.isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                          onPressed: () {
+                            ref.read(authControllerProvider.notifier).register(
+                                  emailController.text,
+                                  psswdController.text,
+                                );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Padding(padding: EdgeInsets.all(12), child: Text('Signup')),
                         ),
-                        child: const Padding(padding: EdgeInsets.all(12), child: Text('Signup')),
-                      );
-                    },
-                  ),
                   
                   const SizedBox(height: 32),
                   Row(
